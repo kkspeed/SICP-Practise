@@ -1,0 +1,12 @@
+Name:                Tiny-SCM
+Version:             0.0
+Synopsis:            A tiny Scheme interpreter
+Description:         Code and exercises from "Write Yourself a Scheme in 48 hours"
+License:             LGPL
+License-file:        ../../LICENSE
+Author:              Bruce Li
+Maintainer:          Bruce Li <leilmyxwz@gmail.com>
+Build-Depends:       base, Cabal, parsec, mtl
+Build-Type:          Simple
+Executable:          tinyscm
+Main-is:             Main.hs

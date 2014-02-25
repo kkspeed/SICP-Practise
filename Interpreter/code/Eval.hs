@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ExistentialQuantification, DoAndIfThenElse #-}
 module Eval where
 import Error
 import Control.Monad.Error
@@ -37,15 +37,14 @@ setVar envRef var value = do env <- liftIO $ readIORef envRef
                              return value
 
 defineVar :: Env -> String -> LispVal -> IOThrowsError LispVal
-defineVar envRef var value = do
-  alreadyDefined <- liftIO $ isBound envRef var
-  if alreadyDefined
-  then setVar envRef var value >> return value
-  else liftIO $ do
-    valueRef <- newIORef value
-    env <- readIORef envRef
-    writeIORef envRef ((var, valueRef) : env)
-    return value
+defineVar envRef var value = do alreadyDefined <- liftIO $ isBound envRef var
+                                if alreadyDefined
+                                then setVar envRef var value >> return value
+                                else liftIO $ do
+                                  valueRef <- newIORef value
+                                  env <- readIORef envRef
+                                  writeIORef envRef ((var, valueRef) : env)
+                                  return value
 
 bindVars :: Env -> [(String, LispVal)] -> IO Env
 bindVars envRef bindings = readIORef envRef >>= extendEnv bindings >>= newIORef
