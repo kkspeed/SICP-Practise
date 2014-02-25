@@ -2,7 +2,9 @@ module Parse where
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric(readHex, readOct, readFloat)
 import Control.Monad
+import Control.Monad.Error
 import AST
+import Error
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
@@ -10,10 +12,10 @@ symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 spaces :: Parser ()
 spaces  = skipMany1 space
 
-readExpr :: String -> LispVal
+readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
-                   Left err -> String $ "No match: " ++ show err
-                   Right val -> val
+                   Left err -> throwError $ Parser err
+                   Right val -> return val
 
 escapeChar :: Parser Char
 escapeChar =  char '\\' >> oneOf "\"tnr\\" >>= \x ->
