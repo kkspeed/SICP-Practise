@@ -1,7 +1,7 @@
 module Main where
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
-import Numeric(readHex, readOct)
+import Numeric(readHex, readOct, readFloat)
 import Control.Monad
 
 main :: IO ()
@@ -25,6 +25,7 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
+             | Float Float
              deriving (Show)
 
 escapeChar :: Parser Char
@@ -40,35 +41,64 @@ parseString = char '"' >> many (escapeChar <|> noneOf "\"") >>= \x ->
 parseAtom :: Parser LispVal
 parseAtom = (letter <|> symbol) >>= \first ->
             many (letter <|> digit <|> symbol) >>= \rest ->
-                return $let atom = [first] ++ rest
-                        in case atom of
-                             "#t" -> Bool True
-                             "#f" -> Bool False
-                             _    -> Atom atom
+                return $ let atom = [first] ++ rest
+                         in case atom of
+                              "#t" -> Bool True
+                              "#f" -> Bool False
+                              _    -> Atom atom
 
 parseNumber :: Parser LispVal
-parseNumber = many1 digit >>= \x -> return (Number $ read x)
+parseNumber = try parseFloat <|> parseDecimal <|> try parseHex <|> parseOct
 
 parseDecimal :: Parser LispVal
 parseDecimal = liftM (Number . read) $ many1 digit
 
+parseFloat :: Parser LispVal
+parseFloat = do
+  x <- many1 digit
+  char '.'
+  y <- many1 digit
+  let ((d,_):_) = readFloat $ x ++ "." ++ y
+  return $ Float d
+
 parseHex :: Parser LispVal
--- parseHex = string "#x" >> do
---              x <- many1 (hexDigit <|> digit)
---              let ((d, _):_) = readHex x
---              return $ Number d
-
--- parseHex = string "#x" >> many1 (hexDigit <|> digit) >>= \x ->
---            return (readHex x) >>= \((d, _):_) -> return $ Number d
-
-parseHex = string "#x" >> many1 (hexDigit <|> digit) >>= \x ->
-           return (readHex x) >>= \((d, _):_) -> return $ Number d
+parseHex = string "#x" >> many1 (hexDigit <|> digit) >>= return . readHex >>=
+           \((d, _):_) -> return $ Number d
 
 parseOct :: Parser LispVal
-parseOct = do
-  val <- many1 (octDigit <|> digit)
-  let ((d, _):_) = readOct val
-  return $ Number d
+parseOct = string "#o" >> many1 (octDigit <|> digit) >>= return . readOct >>=
+           \((d, _):_) -> return $ Number d
+
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  h <- endBy parseExpr spaces
+  t <- char '.' >> spaces >> parseExpr
+  return $ DottedList h t
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+  char '\''
+  x <- parseExpr
+  return $ List [Atom "quote", x]
+
+parseQuasiQuote :: Parser LispVal
+parseQuasiQuote = do
+  char '`'
+  x <- parseExpr
+  return $ List [Atom "quasiquote", x]
+
+parseUnQuote :: Parser LispVal
+parseUnQuote = do
+  char ','
+  x <- parseExpr
+  return $ List [Atom "unquote", x]
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom <|> parseString <|> parseNumber
+parseExpr = parseAtom <|> try parseNumber <|> parseAtom <|> parseString
+            <|> parseQuoted <|> do char '('
+                                   x <- (try parseList) <|> parseDottedList
+                                   char ')'
+                                   return x
