@@ -17,6 +17,9 @@ readExpr input = case parse parseExpr "lisp" input of
                    Left err -> throwError $ Parser err
                    Right val -> return val
 
+readExprList :: String -> ThrowsError [LispVal]
+readExprList = readOrThrow (endBy parseExpr spaces)
+
 escapeChar :: Parser Char
 escapeChar =  char '\\' >> oneOf "\"tnr\\" >>= \x ->
               return $ case lookup x [('n', '\n'), ('t', '\t')] of
@@ -91,3 +94,8 @@ parseExpr = parseAtom <|> try parseNumber <|> parseAtom <|> parseString
                                    x <- (try parseList) <|> parseDottedList
                                    char ')'
                                    return x
+
+readOrThrow :: Parser a -> String -> ThrowsError a
+readOrThrow parser input = case parse parser "lisp" input of
+                             Left err -> throwError $ Parser err
+                             Right val -> return val

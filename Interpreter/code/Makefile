@@ -1,4 +1,4 @@
-Main: Main.hs Eval.hs AST.hs Parse.hs
+Main: Main.hs Eval.hs AST.hs Parse.hs Error.hs
 	ghc Main.hs -o Main
 
 clean:
