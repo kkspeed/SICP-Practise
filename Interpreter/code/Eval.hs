@@ -2,8 +2,8 @@
 module Eval where
 import Error
 import Control.Monad.Error
+import Data.IORef
 import AST
-
 
 eval :: LispVal -> ThrowsError LispVal
 eval val@(String _) = return val
