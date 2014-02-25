@@ -16,6 +16,7 @@ eval (List [Atom "if", p, conseq, alt]) =
        case result of
          Bool False -> eval alt
          _          -> eval conseq
+-- Exercise 5-3: Implement cond
 eval (List ((Atom "cond"):pls)) = evalCondList pls
       where evalCondList (x:xs) =
                 case x of
