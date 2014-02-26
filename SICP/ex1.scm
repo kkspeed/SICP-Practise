@@ -1,13 +1,4 @@
-(define (square x)
-  (* x x))
-
-(define (average x y)
-  (/ (+ x y) 2.0))
-
-(define (abs x)
-  (if (< x 0)
-      (- 0 x)
-      x))
+(load "utils.scm")
 
 (define (sum-squares x y)
   (+ (square x) (square y)))
@@ -34,3 +25,15 @@
         guess
         (sqrt-iter (improve guess))))
   (sqrt-iter 1.0))
+
+(define (factorial n)
+  (if (= n 1)
+      1
+      (* n (factorial (- n 1)))))
+
+(define (factorial-iter n)
+  (define (factor-iter counter product)
+    (if (> counter n)
+      product
+      (factor-iter (+ counter 1) (* counter product))))
+  (factor-iter 1 1))
