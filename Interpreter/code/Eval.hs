@@ -76,6 +76,9 @@ eval env (List [Atom "if", p, conseq, alt]) =
          _          -> eval env conseq
 eval env (List [Atom "load", String filename]) =
     load filename >>= liftM last . mapM (eval env)
+eval env (List (Atom "display":v)) =
+    mapM (eval env) v >>= \l@(r:_) -> foldM (\ _ b -> writeProc [b] >>
+                                            return b) r l
 -- Exercise 5-3: Implement cond
 eval env (List ((Atom "cond"):pls)) = evalCondList pls
       where evalCondList (x:xs) =

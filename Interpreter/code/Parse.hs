@@ -89,7 +89,7 @@ parseUnQuote = do
   return $ List [Atom "unquote", x]
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom <|> try parseNumber <|> parseAtom <|> parseString
+parseExpr = try parseNumber <|> parseAtom <|> parseAtom <|> parseString
             <|> parseQuoted <|> do char '('
                                    x <- (try parseList) <|> parseDottedList
                                    char ')'
