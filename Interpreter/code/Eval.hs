@@ -106,6 +106,7 @@ apply (Func params vararg body closure) args =
               case arg of
                 Just argName -> liftIO $ bindVars env [(argName, List $ remainingArgs)]
                 Nothing -> return env
+apply v _ = throwError $ BadSpecialForm "Unrecognized function" v
 
 primitiveBindings :: IO Env
 primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc IOFunc) ioPrimitives
