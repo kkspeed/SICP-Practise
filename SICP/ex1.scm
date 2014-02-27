@@ -87,3 +87,142 @@
    ((= col row) 1)
    (#t (+ (ex-1-12-f (- row 1) (- col 1))
           (ex-1-12-f (- row 1) col)))))
+
+(define (fast-expt b n)
+  (cond
+   ((= n 0) 1)
+   ((even? n) (square (fast-expt b (/ n 2))))
+   (#t (* b (fast-expt b (- n 1))))))
+
+(define (ex-1-16-expt-iter b n)
+  (define (f b a n)
+    (cond
+     ((= n 0) a)
+     ((even? n) (f (square b) a (/ n 2)))
+     (#t (f b (* a b) (- n 1)))))
+  (f b 1 n))
+
+(define (double x)
+  (+ x x))
+
+(define (mul a b)
+  (cond
+   ((= b 1) a)
+   ((even? b) (double (mul a (/ b 2))))
+   (#t (+ a (mul a (- b 1))))))
+
+(define (ex-1-18-mul-iter a b)
+  (define (f a b c)
+    (cond
+     ((= b 0) c)
+     ((even? b) (f (double a) (/ b 2) c))
+     (#t (f a (- b 1) (+ c a)))))
+  (f a b 0))
+
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (mod a b))))
+
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+
+(define (fast-prime? n times)
+  (cond ((= times 0) #t)
+        ((fermat-test n) (fast-prime? n (- times 1)))
+        (#t #f)))
+
+(define (expmod base exp m)
+  (cond ((= exp 0) 1)
+        ((even? exp) (mod (square (expmod base (/ exp 2) m)) m))
+        (#t (mod (* base (expmod base (- exp 1) m)) m))))
+
+(define (sum term a next b)
+  (if (> a b)
+      0
+      (+ (term a)
+         (sum term (next a) next b))))
+
+(define (pi-sum a b)
+  (define (pi-term x)
+    (/ 1.0 (* x (+ x 2))))
+  (define (pi-next x)
+    (+ x 4))
+  (sum pi-term a pi-next b))
+
+(define (ex-1-30-sum-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ result (term a)))))
+  (iter a 0))
+
+(define (product term a next b)
+  (if (> a b)
+      1
+      (* (term a)
+         (product term (next a) next b))))
+
+(define (product-iter term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (* result (term a)))))
+  (iter term a 1))
+
+(define (pi-product a b)
+  (define (pi-term x)
+    (* (/ (- x 1.0) x)
+       (/ (+ x 1.0) x)))
+  (define (pi-next x)
+    (+ x 2.0))
+  (product pi-term a pi-next b))
+
+(define (accumulate1 combiner null-value term a next b)
+  (if (> a b)
+      null-value
+      (combiner (term a)
+                (accumulate1 combiner null-value term (next a) next b))))
+
+(define (accumulate combiner null-value term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (combiner (term a) result))))
+  (iter a null-value))
+
+(define (filter-accumulate combiner pred null-value term a next b)
+  (cond ((> a b) null-value)
+        ((pred a) (combiner (term a)
+                            (filter-accumulate combiner pred null-value term
+                                               (next a) next b)))
+        (#t (filter-accumulate combiner pred null-value term
+                               (next a) next b))))
+
+(define (prime-sum a b)
+  (define (prime? x)
+    (fast-prime? x 100))
+  (filter-accumulate + prime? 0 identity a inc b))
+
+(define (pi-product-2 a b)
+  (define (pi-term x)
+    (* (/ (- x 1.0) x)
+       (/ (+ x 1.0) x)))
+  (define (pi-next x)
+    (+ x 2.0))
+  (* 4.0 (accumulate * 1 pi-term a pi-next b)))
+
+(define (fixed-point f x thresh)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) thresh))
+  (define v (f x))
+  (if (close-enough? v x)
+      x
+      (fixed-point f v thresh)))
+
+(define  (my-sqrt x)
+  (fixed-point (lambda (y) (average y (/ x y)))
+               1.0
+               0.01))

@@ -3,7 +3,9 @@ module Eval where
 import Error
 import Control.Monad.Error
 import System.IO
+import System.Random (randomRIO)
 import Data.IORef
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Parse
 import AST
 
@@ -88,6 +90,8 @@ eval env (List ((Atom "cond"):pls)) = evalCondList pls
                                         Bool False -> evalCondList xs
                                         _          -> eval env f
                   _              -> throwError $ BadSpecialForm "Malformed condition form" x
+eval env (List [Atom "random", v]) = eval env v >>= \x -> randomNum [x]
+eval _   (List [Atom "runtime"]) = liftIO $ getPOSIXTime >>= return .  Number . round
 eval env (List (function : args)) = do
   function <- eval env function
   argVals <- mapM (eval env) args
@@ -125,7 +129,7 @@ primitives = [("+", numOpList doAdd),
               ("-", numOpList doSub),
               ("*", numOpList doMul),
               ("/", numOpList doDiv),
-              ("mod", numericBinop div),
+              ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
               ("remainder", numericBinop rem),
               ("=", boolOpList doEq),
@@ -332,6 +336,10 @@ ioPrimitives = [("apply", applyProc),
                 ("write", writeProc),
                 ("read-contents", readContents),
                 ("read-all", readAll)]
+
+randomNum :: [LispVal] -> IOThrowsError LispVal
+randomNum [Number n] = liftIO $ randomRIO (0, n-1) >>= return . Number
+randomNum [Float n] = liftIO $ randomRIO (0, n-1) >>= return . Float
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args
