@@ -81,6 +81,7 @@ eval env (List [Atom "load", String filename]) =
 eval env (List (Atom "display":v)) =
     mapM (eval env) v >>= \l@(r:_) -> foldM (\ _ b -> writeProc [b] >>
                                             return b) r l
+eval _ (List [Atom "newline"]) = writeNewLine [Port stdout]
 -- Exercise 5-3: Implement cond
 eval env (List ((Atom "cond"):pls)) = evalCondList pls
       where evalCondList (x:xs) =
@@ -359,7 +360,11 @@ readProc [Port port] = (liftIO $ hGetLine port) >>= liftThrows . readExpr
 
 writeProc :: [LispVal] -> IOThrowsError LispVal
 writeProc [obj] = writeProc [obj, Port stdout]
-writeProc [obj, Port port] = liftIO $ hPrint port obj >> (return $ Bool True)
+writeProc [obj, Port port] = liftIO $ hPutStr port (show obj) >> (return $ Bool True)
+
+writeNewLine :: [LispVal] -> IOThrowsError LispVal
+writeNewLine []  = writeNewLine [Port stdout]
+writeNewLine [Port port] = liftIO $ hPutStrLn port "" >> (return $ Bool True)
 
 readContents :: [LispVal] -> IOThrowsError LispVal
 readContents [String filename] = liftM String $ liftIO $ readFile filename
