@@ -317,3 +317,29 @@
 
 (define (n-fold-smooth f n)
   ((repeat-n smooth n) f))
+
+(define (n-power x n)
+  (accumulate * 1 (lambda (i) x) 1 inc n))
+
+(define (n-root x n)
+  (fixed-point ((repeat-n average-damp (- n 1))
+                (lambda (y)
+                  (/ x (n-power y (- n 1)))))
+               1.0
+               0.000001))
+
+(define (iterative-improve improve good-enough?)
+  (define (f guess)
+    (if (good-enough? guess)
+        guess
+        (f (improve guess))))
+  f)
+
+(define (ho-fixed-point f x thresh)
+  ((iterative-improve f (lambda (x) (< (abs (- (f x) x)) thresh)))
+   x))
+
+(define (my-sqrt-v2 x)
+  (fixed-point (average-damp (lambda (y) (/ x y)))
+               1.0
+               0.0001))
