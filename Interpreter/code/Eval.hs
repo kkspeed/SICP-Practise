@@ -151,6 +151,8 @@ primitives = [("+", numOpList doAdd),
               ("number?", booleanSingletonOp isNumber),
               ("car", car),
               ("cdr", cdr),
+              ("cons", cons),
+              ("list", list),
               ("eq?", eqv),
               ("eqv?", eqv),
               ("equal?", equal)]
@@ -271,6 +273,15 @@ car [List (x : _)] = return x
 car [DottedList (x : _) _] = return x
 car [badArg] = throwError $ TypeMismatch "pair" badArg
 car badArgList = throwError $ NumArgs 1 badArgList
+
+cons :: [LispVal] -> ThrowsError LispVal
+cons [x, List lst] = return . List $ x:lst
+cons [x, DottedList lst a] = return $ DottedList (x:lst) a
+cons [x, y] = return . DottedList [x] $ y
+cons (m:_) = throwError $ BadSpecialForm "cons" m
+
+list :: [LispVal] -> ThrowsError LispVal
+list lst = return $ List $ lst
 
 cdr :: [LispVal] -> ThrowsError LispVal
 cdr [List (_ : xs)] = return $ List xs
