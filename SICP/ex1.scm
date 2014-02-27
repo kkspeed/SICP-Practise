@@ -226,3 +226,94 @@
   (fixed-point (lambda (y) (average y (/ x y)))
                1.0
                0.01))
+
+(define (ex-1-35-gold)
+  (fixed-point (lambda (x)
+                 (+ 1 (/ 1 x)))
+               1.0
+               0.001))
+
+(define (cont-frac n d k)
+  (define (f i)
+    (if (> i k)
+        1
+        (/ (n i)
+           (+ (d i) (f (inc i))))))
+  (define (iter i res)
+    (if (> i k)
+        res
+        (iter (inc i) (/ (n i)
+                         (+ (d i) res)))))
+  (display (f 1) '---)
+  (display (iter 1 0)))
+
+(define (eu-expan-i i)
+  (cond
+   ((= (mod i 3) 2) (* 2.0 (inc (/ i 3))))
+   (#t 1.0)))
+
+(define (eu-expan-n i) 1.0)
+
+(define (approx-e)
+  (+ 2 (cont-frac eu-expan-i eu-expan-n 100)))
+
+(define (tan x k)
+  (define r (square x))
+  (define (f n)
+    (if (> n k)
+        0
+        (- (- (* 2.0 n) 1.0) (/ r (f (inc n))))))
+  (/ x (f 1)))
+
+(define (average-damp f)
+  (lambda (x) (average x (f x))))
+
+(define (cube-root x)
+  (fixed-point (average-damp (lambda (y) (/ x (square y))))
+               1.0
+               0.001))
+
+(define (deriv g)
+  (define dx 0.00001)
+  (lambda (x) (/ (- (g (+ x dx)) (g x)) dx)))
+
+(define (newton-transform g)
+  (lambda (x)
+    (- x (/ (g x) ((deriv g) x)))))
+
+(define (newtons-method g guess)
+  (fixed-point (newton-transform g)
+               guess
+               0.0001))
+
+(define (sqrt x)
+  (newtons-method (lambda (y) (- (square y) x)) 1.0))
+
+(define (ex-1-40-cubic a b c)
+  (lambda (x)
+    (+ (* x x x) (* a x x) (* b x) c)))
+
+(define my-cube (ex-1-40-cubic 3 5 8))
+
+(define (double f)
+  (lambda (x)
+    (f (f x))))
+
+(define (compose f g)
+  (lambda (x)
+    (f (g x))))
+
+(define (repeat-n f n)
+  (define (rp i)
+    (if (>= i n)
+        f
+        (compose f (rp (inc i)))))
+  (rp 1))
+
+(define (smooth f)
+  (define dx 0.0001)
+  (lambda (x)
+    (/ (+ (f (- x dx)) (f x) (f (+ x dx))) 3.0)))
+
+(define (n-fold-smooth f n)
+  ((repeat-n smooth n) f))

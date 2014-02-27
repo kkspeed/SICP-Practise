@@ -28,3 +28,7 @@
    (#t (* b (fast-expt b (- n 1))))))
 
 (define (identity x) x)
+
+(define (compose f g)
+  (lambda (x)
+    (f (g x))))
