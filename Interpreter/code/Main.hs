@@ -1,6 +1,7 @@
 {-# LANGUAGE DoAndIfThenElse #-}
 module Main where
 import System.Environment
+import System.Console.Readline
 import System.IO
 import Control.Monad
 import Parse
@@ -17,7 +18,12 @@ flushStr :: String -> IO ()
 flushStr str = putStr str >> hFlush stdout
 
 readPrompt :: String -> IO String
-readPrompt prompt = flushStr prompt >> getLine
+-- readPrompt prompt = flushStr prompt >> getLine
+readPrompt prompt = do l <- readline prompt
+                       case l of
+                         Just line -> do addHistory line
+                                         return line
+                         Nothing -> readPrompt prompt
 
 evalString :: Env -> String -> IO String
 evalString env expr = runIOThrows $ liftM show $ (liftThrows $ readExpr expr) >>=

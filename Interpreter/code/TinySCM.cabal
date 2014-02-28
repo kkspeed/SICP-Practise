@@ -6,7 +6,7 @@ License:             LGPL
 License-file:        ../../LICENSE
 Author:              Bruce Li
 Maintainer:          Bruce Li <leilmyxwz@gmail.com>
-Build-Depends:       base, Cabal, parsec, mtl, random, time
+Build-Depends:       base, Cabal, parsec, mtl, random, time, readline
 Build-Type:          Simple
 Executable:          tinyscm
 Main-is:             Main.hs
