@@ -32,3 +32,11 @@
 (define (compose f g)
   (lambda (x)
     (f (g x))))
+
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (mod a b))))
+
+(define (neg x)
+  (- 0 x))

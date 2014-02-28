@@ -11,6 +11,7 @@ showError (NumArgs expected found) = "Expected " ++ show expected ++ " args: " +
                                      "found values " ++ unwordList found
 showError (TypeMismatch expected found) = "Invalid type expected " ++ expected ++
                                           ", found " ++ show found
+showError (Parser parseError) = "Error during parsing: " ++ show parseError
 
 instance Show LispError where show = showError
 
