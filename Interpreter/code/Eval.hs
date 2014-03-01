@@ -153,6 +153,7 @@ primitives = [("+", numOpList doAdd),
               ("cdr", cdr),
               ("cons", cons),
               ("list", list),
+              ("pair?", pair),
               ("eq?", eqv),
               ("eqv?", eqv),
               ("equal?", equal)]
@@ -282,6 +283,11 @@ cons (m:_) = throwError $ BadSpecialForm "cons" m
 
 list :: [LispVal] -> ThrowsError LispVal
 list lst = return $ List $ lst
+
+pair :: [LispVal] -> ThrowsError LispVal
+pair [List _] = return $ Bool True
+pair [DottedList _ _] = return $ Bool True
+pair _ = return $ Bool False
 
 cdr :: [LispVal] -> ThrowsError LispVal
 cdr [List (_ : xs)] = return $ List xs
