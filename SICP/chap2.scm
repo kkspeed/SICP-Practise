@@ -254,7 +254,8 @@
 (define (make-exponentiation e1 e2)
   (cond ((=number? e1 0) 0)
         ((=number? e2 0) 1)
-        ((=))))
+        ((and (number? e1) (number? e2)) (fast-expt e1 e2))
+        (#t (list '^ e1 e2))))
 
 (define (deriv exp var)
   (cond ((number? exp) 0)
@@ -269,4 +270,30 @@
                         (deriv (multiplicand exp) var))
           (make-product (deriv (multiplier exp) var)
                         (multiplicand exp))))
+        ((exponentiation? exp)
+         (make-product (exponent exp)
+                       (make-exponentiation (base exp)
+                                            (dec (exponent exp)))))
         (#t (display "Unknown expression type -- DERIV " exp))))
+
+(define (element-of-set? x set)
+  (cond ((null? set) #f)
+        ((equal? x (car set)) #t)
+        (#t (element-of-set? x (cdr set)))))
+
+(define (adjoin-set x set)
+  (if (element-of-set? x set)
+      set
+      (cons x set)))
+
+(define (intersection-set set1 set2)
+  (cond ((or (null? set1) (null? set2)) nil)
+        ((element-of-set? (car set1) set2)
+         (cons (car set1 (intersection-set (cdr set1) set2))))
+        (#t (intersection-set (cdr set1) set2))))
+
+(define (union-set set1 set2)
+  (cond ((null? set1) set2)
+        ((element-of-set? (car set1) set2)
+         (union-set (cdr set1) set2))
+        (#t (cdr set1) (cons (car set1) set2))))
