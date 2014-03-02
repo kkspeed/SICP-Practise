@@ -167,3 +167,15 @@
   (cond ((null? x) x)
         ((eq? item (car x)) x)
         (#t (memq item (cdr x)))))
+
+(define (cadr l)
+  (car (cdr l)))
+
+(define (cddr l)
+  (cdr (cdr l)))
+
+(define (caddr l)
+  (car (cdr (cdr l))))
+
+(define (caadr l)
+  (car (car (cdr l))))
