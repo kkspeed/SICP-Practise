@@ -162,3 +162,8 @@
                  (map (lambda (p) (cons x p))
                       (permutations (remove x s))))
                s)))
+
+(define (memq item x)
+  (cond ((null? x) x)
+        ((eq? item (car x)) x)
+        (#t (memq item (cdr x)))))
