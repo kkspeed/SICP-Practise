@@ -1,4 +1,4 @@
-{-# LANGUAGE ExistentialQuantification, DoAndIfThenElse #-}
+{-# LANGUAGE ExistentialQuantification, DoAndIfThenElse, RankNTypes #-}
 module Eval where
 import Error
 import Control.Monad.Error
@@ -117,28 +117,28 @@ apply (Func params vararg body closure) args =
 apply v _ = throwError $ BadSpecialForm "Unrecognized function" v
 
 primitiveBindings :: IO Env
-primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFunc IOFunc) ioPrimitives
-                                      ++ map (makeFunc PrimitiveFunc) primitives)
-    where makeFunc constructor (var, func) = (var, constructor func)
+primitiveBindings = nullEnv >>= (flip bindVars $ map (makeFun IOFunc) ioPrimitives
+                                      ++ map (makeFun PrimitiveFunc) primitives)
+    where makeFun constructor (var, func) = (var, constructor func)
 
 makeFunc varargs env params body = return $ Func (map showVal params) varargs body env
 makeNormalFunc = makeFunc Nothing
 makeVarargs = makeFunc . Just . showVal
 
 primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
-primitives = [("+", numOpList doAdd),
-              ("-", numOpList doSub),
-              ("*", numOpList doMul),
+primitives = [("+", numOpList $ doNumeric (+)),
+              ("-", numOpList $ doNumeric (-)),
+              ("*", numOpList $ doNumeric (*)),
               ("/", numOpList doDiv),
               ("mod", numericBinop mod),
               ("quotient", numericBinop quot),
               ("remainder", numericBinop rem),
-              ("=", boolOpList doEq),
-              ("<", boolOpList doLess),
-              (">", boolOpList doGreater),
-              ("/=", boolOpList doNotEq),
-              (">=", boolOpList doGreaterEq),
-              ("<=", boolOpList doLessEq),
+              ("=", boolOpList $ doComparison (==)),
+              ("<", boolOpList $ doComparison (<)),
+              (">", boolOpList $ doComparison (>)),
+              ("/=", boolOpList $ doComparison (/=)),
+              (">=", boolOpList $ doComparison (>=)),
+              ("<=", boolOpList $ doComparison (<=)),
               ("and", boolBoolOp (&&)),
               ("or", boolBoolOp (||)),
               ("string=?", strBoolOp (==)),
@@ -169,23 +169,11 @@ boolOpList op ps = if length ps <= 1
                    then throwError $ NumArgs 2 ps
                    else return . Bool . all (\(a,b)->(a `op` b)) $ zip ps (tail ps)
 
-doAdd :: LispVal -> LispVal -> ThrowsError LispVal
-doAdd (Number a) (Number b) = return $ Number $ a + b
-doAdd (Float a)  (Float b) = return $ Float $ a + b
-doAdd (Float a)  (Number b) = return $ Float $ a + fromIntegral b
-doAdd (Number a) (Float b) = return $ Float $ fromIntegral a + b
-
-doSub :: LispVal -> LispVal -> ThrowsError LispVal
-doSub (Number a) (Number b) = return $ Number $ a - b
-doSub (Float a)  (Float b)  = return $ Float $ a - b
-doSub (Float a)  (Number b) = return $ Float (a - fromIntegral b)
-doSub (Number a) (Float b)  = return $ Float (fromIntegral a - b)
-
-doMul :: LispVal -> LispVal -> ThrowsError LispVal
-doMul (Number a) (Number b) = return $ Number $ a * b
-doMul (Float a)  (Float b)  = return $ Float $ a * b
-doMul (Float a)  (Number b) = return $ Float (a * fromIntegral b)
-doMul (Number a) (Float b)  = return $ Float (fromIntegral a * b)
+doNumeric :: (forall a . (Num a) => (a -> a -> a)) -> LispVal -> LispVal -> ThrowsError LispVal
+doNumeric op (Number a) (Number b) = return $ Number $ a `op` b
+doNumeric op (Number a) (Float b) = return $ Float $ fromIntegral a `op` b
+doNumeric op (Float a) (Number b) = return $ Float $ a `op` fromIntegral b
+doNumeric op (Float a) (Float b) = return $ Float $ a `op` b
 
 doDiv :: LispVal -> LispVal -> ThrowsError LispVal
 doDiv (Number a) (Number b) = return $ Number $ a `div` b
@@ -193,30 +181,13 @@ doDiv (Float a) (Float b)   = return $ Float $ a / b
 doDiv (Float a) (Number b)  = return $ Float (a / fromIntegral b)
 doDiv (Number a) (Float b)  = return $ Float (fromIntegral a / b)
 
-doLess :: LispVal -> LispVal -> Bool
-doLess (Number a) (Number b) = a < b
-doLess (Float a) (Float b)   = a < b
-doLess (Float a) (Number b)  = (a < fromIntegral b)
-doLess (Number a) (Float b)  = (fromIntegral a < b)
+doComparison :: (forall a . (Ord a) => (a -> a -> Bool)) -> LispVal -> LispVal -> Bool
+doComparison op (Number a) (Number b) = a `op` b
+doComparison op (Float a) (Float b) = a `op` b
+doComparison op (Float a) (Number b) = a `op` fromIntegral b
+doComparison op (Number a) (Float b) = fromIntegral a `op` b
 
-doGreater :: LispVal -> LispVal -> Bool
-doGreater (Number a) (Number b) = a > b
-doGreater (Float a) (Float b)   = a > b
-doGreater (Float a) (Number b)  = (a > fromIntegral b)
-doGreater (Number a) (Float b)  = (fromIntegral a > b)
-
-doLessEq :: LispVal -> LispVal -> Bool
-doLessEq x = not . doGreater x
-
-doGreaterEq :: LispVal -> LispVal -> Bool
-doGreaterEq x = not . doLess x
-
-doEq :: LispVal -> LispVal -> Bool
-doEq x y = (doGreaterEq x y) && (doLessEq x y)
-
-doNotEq :: LispVal -> LispVal -> Bool
-doNotEq x = not . doEq x
-
+numBinOp :: [LispVal] -> ThrowsError LispVal
 numBinOp [arg1, arg2] = do
   primitiveEquals <- liftM or $ mapM (unpackEquals arg1 arg2)
                     [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
@@ -225,7 +196,7 @@ numBinOp [arg1, arg2] = do
 
 numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
 numericBinop _ singleVal@[_]  = throwError $ NumArgs 2 singleVal
-numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op
+numericBinop op pms = mapM unpackNum pms >>= return . Number . foldl1 op
 
 boolOp :: (Eq a) => (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolOp unpacker op args = if length args <= 1
