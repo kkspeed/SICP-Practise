@@ -78,10 +78,6 @@ eval env (List [Atom "if", p, conseq, alt]) =
          _          -> eval env conseq
 eval env (List [Atom "load", String filename]) =
     load filename >>= liftM last . mapM (eval env)
-eval env (List (Atom "display":v)) =
-    mapM (eval env) v >>= \l@(r:_) -> foldM (\ _ b -> writeProc [b] >>
-                                            return b) r l
-eval _ (List [Atom "newline"]) = writeNewLine [Port stdout]
 -- Exercise 5-3: Implement cond
 eval env (List ((Atom "cond"):pls)) = evalCondList pls
       where evalCondList (x:xs) =
@@ -91,17 +87,21 @@ eval env (List ((Atom "cond"):pls)) = evalCondList pls
                                         Bool False -> evalCondList xs
                                         _          -> eval env f
                   _              -> throwError $ BadSpecialForm "Malformed condition form" x
-eval env (List [Atom "random", v]) = eval env v >>= \x -> randomNum [x]
-eval _   (List [Atom "runtime"]) = liftIO $ getPOSIXTime >>= return .  Number . round
+eval env (List ((Atom "let"):varbinds:body)) =
+    eval env $ List $ [List $ [Atom "lambda", List (vars varbinds)] ++ body]++
+             (args varbinds)
+    where vars (List bds) = map (\(List (x:_)) -> x) bds
+          args (List bds) = join $ map (\(List (_:v)) -> v) bds
 eval env (List (function : args)) = do
-  function <- eval env function
+  func <- eval env function
   argVals <- mapM (eval env) args
-  apply function argVals
+  apply func argVals
 
 eval _ badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
 apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
 apply (PrimitiveFunc func) args = liftThrows $ func args
+apply (IOFunc func) args = func args
 apply (Func params vararg body closure) args =
     if num params /= num args && vararg == Nothing
     then throwError $ NumArgs (num params) args
@@ -324,11 +324,28 @@ ioPrimitives = [("apply", applyProc),
                 ("read", readProc),
                 ("write", writeProc),
                 ("read-contents", readContents),
-                ("read-all", readAll)]
+                ("read-all", readAll),
+                ("random", randomNum),
+                ("runtime", runtime),
+                ("display", display),
+                ("newline", newline)]
 
 randomNum :: [LispVal] -> IOThrowsError LispVal
 randomNum [Number n] = liftIO $ randomRIO (0, n-1) >>= return . Number
 randomNum [Float n] = liftIO $ randomRIO (0, n-1) >>= return . Float
+randomNum [v] = throwError $ TypeMismatch "Expect Int or Float" v
+randomNum args   = throwError $ NumArgs 1 args
+
+runtime :: [LispVal] -> IOThrowsError LispVal
+runtime [] = liftIO $ getPOSIXTime >>= return . Number . round
+runtime args = throwError $ NumArgs 0 args
+
+display :: [LispVal] -> IOThrowsError LispVal
+display args = mapM (\x -> writeProc [x]) args >> (return $ Bool True)
+
+newline :: [LispVal] -> IOThrowsError LispVal
+newline [] = writeNewLine [Port stdout]
+newline args = throwError $ NumArgs 0 args
 
 applyProc :: [LispVal] -> IOThrowsError LispVal
 applyProc [func, List args] = apply func args
