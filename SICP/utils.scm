@@ -179,3 +179,6 @@
 
 (define (caadr l)
   (car (car (cdr l))))
+
+(define (cadddr l)
+  (car (cdr (cdr (cdr l)))))
