@@ -439,3 +439,14 @@
             (s2 (cadr set)))
         (successive-merge (adjoin-set (make-code-tree s1 s2)
                                       (cddr set))))))
+
+(define symbol-pairs '((A 2)
+                       (GET 2)
+                       (SHA 3)
+                       (WAH 1)
+                       (BOOM 1)
+                       (JOB 2)
+                       (NA 16)
+                       (YIP 9)))
+
+(define message '(GET A JOB SHA NA NA NA NA NA NA NA NA))

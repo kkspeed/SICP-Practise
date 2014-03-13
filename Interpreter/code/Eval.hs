@@ -92,6 +92,7 @@ eval env (List ((Atom "let"):varbinds:body)) =
              (args varbinds)
     where vars (List bds) = map (\(List (x:_)) -> x) bds
           args (List bds) = join $ map (\(List (_:v)) -> v) bds
+eval env (List ((Atom "begin"):bds)) = liftM last $ mapM (eval env) bds
 eval env (List (function : args)) = do
   func <- eval env function
   argVals <- mapM (eval env) args
