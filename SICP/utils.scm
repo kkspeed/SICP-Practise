@@ -182,3 +182,8 @@
 
 (define (cadddr l)
   (car (cdr (cdr (cdr l)))))
+
+(define INF 2147483647)
+
+(define (rand)
+  (random INF))
